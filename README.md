@@ -1,36 +1,134 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# NU Student Help Admin Dashboard
 
-## Getting Started
+Admin-only dashboard for the MVP of the NU Student Help Website. This repository contains the internal content management interface only. It does not include the public student-facing website.
 
-First, run the development server:
+## Stack
+
+- Next.js App Router
+- TypeScript
+- Tailwind CSS v4
+- REST API integration
+- JWT-based admin authentication
+
+## Features
+
+- Admin login at `/login`
+- Protected admin routes with middleware and client-side auth guard
+- Dashboard overview with key resource counts and recent resources
+- CRUD screens for:
+  - courses
+  - departments
+  - academic years
+  - subjects
+  - notices
+  - routines
+  - syllabus
+  - previous questions
+  - resources
+- Student request management with status updates
+- Upload flow for PDFs and images through `/api/admin/uploads`
+- Reusable tables, badges, modal forms, and confirm dialog
+- Mock mode for previewing the UI when the backend is unavailable
+
+## Routes
+
+Public:
+
+- `/login`
+
+Protected admin:
+
+- `/dashboard`
+- `/courses`
+- `/departments`
+- `/academic-years`
+- `/subjects`
+- `/notices`
+- `/routines`
+- `/syllabus`
+- `/questions`
+- `/resources`
+- `/student-requests`
+- `/uploads`
+
+## Environment
+
+Copy the example values into `.env.local`:
+
+```bash
+cp .env.example .env.local
+```
+
+Variables:
+
+```env
+NEXT_PUBLIC_API_BASE_URL=http://localhost:5000/api
+NEXT_PUBLIC_USE_MOCKS=false
+```
+
+## Mock Mode
+
+Set `NEXT_PUBLIC_USE_MOCKS=true` to preview the full dashboard without the Express backend.
+
+Mock credentials:
+
+- Email: `admin@nuhelp.local`
+- Password: `password123`
+
+## Expected Backend Endpoints
+
+- `POST /api/admin/login`
+- `GET /api/admin/me`
+- `GET /api/admin/dashboard`
+- `GET|POST /api/admin/courses`
+- `PATCH|DELETE /api/admin/courses/:id`
+- `GET|POST /api/admin/departments`
+- `PATCH|DELETE /api/admin/departments/:id`
+- `GET|POST /api/admin/academic-years`
+- `PATCH|DELETE /api/admin/academic-years/:id`
+- `GET|POST /api/admin/subjects`
+- `PATCH|DELETE /api/admin/subjects/:id`
+- `GET|POST /api/admin/notices`
+- `PATCH|DELETE /api/admin/notices/:id`
+- `GET|POST /api/admin/routines`
+- `PATCH|DELETE /api/admin/routines/:id`
+- `GET|POST /api/admin/syllabus`
+- `PATCH|DELETE /api/admin/syllabus/:id`
+- `GET|POST /api/admin/questions`
+- `PATCH|DELETE /api/admin/questions/:id`
+- `GET|POST /api/admin/resources`
+- `PATCH|DELETE /api/admin/resources/:id`
+- `GET|POST /api/admin/student-requests`
+- `PATCH /api/admin/student-requests/:id`
+- `POST /api/admin/uploads`
+
+## Development
+
+Install dependencies:
+
+```bash
+npm install
+```
+
+Run the dev server:
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open `http://localhost:3000`.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Validation
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+The project is expected to pass:
 
-## Learn More
+```bash
+npm run lint
+npm run build
+```
 
-To learn more about Next.js, take a look at the following resources:
+## Notes
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- JWT is stored in `localStorage` for API requests and mirrored into a cookie for route protection.
+- The CRUD pages are config-driven to keep the MVP maintainable without adding heavy state-management libraries.
+- Uploaded files are attached inside form state after the upload endpoint returns file metadata.
