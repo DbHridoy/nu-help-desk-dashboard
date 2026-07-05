@@ -28,9 +28,9 @@ const AuthContext = createContext<AuthContextValue | null>(null);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const router = useRouter();
-  const [token, setToken] = useState<string | null>(() => getStoredToken());
-  const [admin, setAdmin] = useState<AdminUser | null>(() => getStoredAdmin() as AdminUser | null);
-  const [isLoading, setIsLoading] = useState(() => Boolean(getStoredToken()));
+  const [token, setToken] = useState<string | null>(null);
+  const [admin, setAdmin] = useState<AdminUser | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
   const refreshAdmin = useCallback(async () => {
     const storedToken = getStoredToken();
@@ -56,19 +56,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => {
-    if (!token) {
-      return;
-    }
-
     let cancelled = false;
-    const sessionToken = token;
 
-    async function bootstrapAdmin() {
+    async function bootstrapSession() {
+      const storedToken = getStoredToken();
+
+      if (!storedToken) {
+        if (!cancelled) {
+          setToken(null);
+          setAdmin(null);
+          setIsLoading(false);
+        }
+        return;
+      }
+
+      if (!cancelled) {
+        setToken(storedToken);
+      }
+
       try {
         const currentAdmin = (await adminApi.me()) as AdminUser;
         if (!cancelled) {
           setAdmin(currentAdmin);
-          setStoredSession(sessionToken, currentAdmin);
+          setStoredSession(storedToken, currentAdmin);
         }
       } catch {
         if (!cancelled) {
@@ -81,12 +91,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     }
 
-    void bootstrapAdmin();
+    void bootstrapSession();
 
     return () => {
       cancelled = true;
     };
-  }, [token]);
+  }, []);
 
   const login = useCallback(
     async (email: string, password: string) => {
