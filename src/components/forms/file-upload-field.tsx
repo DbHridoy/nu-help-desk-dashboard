@@ -4,7 +4,7 @@ import { useState } from "react";
 import type { ChangeEvent } from "react";
 import { Button } from "@/components/ui/button";
 import { adminApi } from "@/lib/api/client";
-import { formatBytes, formatDate } from "@/lib/utils";
+import { formatBytes, formatDate, getFileUrl } from "@/lib/utils";
 import type { UploadedFile } from "@/types";
 
 export function FileUploadField({
@@ -82,7 +82,7 @@ export function FileUploadField({
             </div>
             <div className="flex gap-2">
               <a
-                href={file.url}
+                href={getFileUrl(file.url)}
                 target="_blank"
                 rel="noreferrer"
                 className="rounded-2xl border border-[var(--color-border)] px-3 py-2 text-sm font-semibold"

@@ -12,7 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { useCrudResource } from "@/hooks/useCrudResource";
 import { useReferenceData } from "@/hooks/useReferenceData";
 import { createReferenceBundle, crudConfigs } from "@/features/admin/crud-config";
-import { formatDate } from "@/lib/utils";
+import { formatDate, getFileUrl } from "@/lib/utils";
 import type { AdminResource, EntityMap, UploadedFile } from "@/types";
 
 function normalizeValues(values: FormValues) {
@@ -36,7 +36,7 @@ function filesColumn<T extends { files?: UploadedFile[] }>() {
           {row.files.map((file) => (
             <a
               key={file.id}
-              href={file.url}
+              href={getFileUrl(file.url)}
               target="_blank"
               rel="noreferrer"
               className="block text-sm font-semibold text-[var(--color-primary)]"

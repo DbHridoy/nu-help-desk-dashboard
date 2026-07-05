@@ -1,4 +1,5 @@
 import type { UploadedFile } from "@/types";
+import { getFileUrl } from "@/lib/api/normalize";
 
 export function cn(...values: Array<string | false | null | undefined>) {
   return values.filter(Boolean).join(" ");
@@ -64,3 +65,5 @@ export function normalizeFiles(input: unknown): UploadedFile[] {
       ),
   );
 }
+
+export { getFileUrl };

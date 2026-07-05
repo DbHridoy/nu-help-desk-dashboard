@@ -1,7 +1,6 @@
 import { getStoredToken } from "@/lib/auth";
 import { API_BASE_URL, USE_MOCKS } from "@/lib/env";
 import { mockApi } from "@/lib/mock/service";
-import { normalizeFiles } from "@/lib/utils";
 import type {
   AdminResource,
   DashboardSummary,
@@ -11,6 +10,15 @@ import type {
   StudentRequestStatus,
   UploadedFile,
 } from "@/types";
+import {
+  getFileUrl,
+  normalizeDashboardSummary,
+  normalizeEntity,
+  normalizeLoginResponse,
+  normalizeStudentRequest,
+  unwrapEnvelope,
+  toBackendPayload,
+} from "@/lib/api/normalize";
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const token = getStoredToken();
@@ -45,12 +53,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
     return undefined as T;
   }
 
-  const payload = (await response.json()) as T | { data?: T };
-  if (payload && typeof payload === "object" && "data" in payload && payload.data) {
-    return payload.data;
-  }
-
-  return payload as T;
+  return (await response.json()) as T;
 }
 
 function normalizeListResponse<T>(payload: T[] | { items?: T[]; data?: T[] }) {
@@ -61,31 +64,17 @@ function normalizeListResponse<T>(payload: T[] | { items?: T[]; data?: T[] }) {
   return payload.items ?? payload.data ?? [];
 }
 
-function coerceEntity<T extends { files?: unknown }>(entity: T): T {
-  if (!entity || typeof entity !== "object") {
-    return entity;
-  }
-
-  if ("files" in entity) {
-    return {
-      ...entity,
-      files: normalizeFiles(entity.files),
-    };
-  }
-
-  return entity;
-}
-
 export const adminApi = {
   async login(email: string, password: string): Promise<LoginResponse> {
     if (USE_MOCKS) {
       return mockApi.login(email, password);
     }
 
-    return request<LoginResponse>("/admin/login", {
+    const payload = await request("/admin/login", {
       method: "POST",
       body: JSON.stringify({ email, password }),
     });
+    return normalizeLoginResponse(unwrapEnvelope(payload));
   },
 
   async me() {
@@ -93,7 +82,8 @@ export const adminApi = {
       return mockApi.me();
     }
 
-    return request("/admin/me");
+    const payload = await request("/admin/me");
+    return unwrapEnvelope(payload);
   },
 
   async getDashboard(): Promise<DashboardSummary> {
@@ -101,7 +91,8 @@ export const adminApi = {
       return mockApi.dashboard();
     }
 
-    return request<DashboardSummary>("/admin/dashboard");
+    const payload = await request("/admin/dashboard");
+    return normalizeDashboardSummary(unwrapEnvelope(payload));
   },
 
   async list<R extends AdminResource>(resource: R): Promise<EntityMap[R][]> {
@@ -112,8 +103,8 @@ export const adminApi = {
     const payload = await request<EntityMap[R][] | { items?: EntityMap[R][]; data?: EntityMap[R][] }>(
       `/admin/${resource}`,
     );
-    return normalizeListResponse(payload).map((item) =>
-      coerceEntity(item as { files?: unknown }),
+    return normalizeListResponse(unwrapEnvelope(payload) ?? []).map((item) =>
+      normalizeEntity(resource, item),
     ) as EntityMap[R][];
   },
 
@@ -127,9 +118,9 @@ export const adminApi = {
 
     const created = await request<EntityMap[R]>(`/admin/${resource}`, {
       method: "POST",
-      body: JSON.stringify(payload),
+      body: JSON.stringify(toBackendPayload(resource, payload)),
     });
-    return coerceEntity(created as { files?: unknown }) as EntityMap[R];
+    return normalizeEntity(resource, unwrapEnvelope(created));
   },
 
   async update<R extends AdminResource>(
@@ -143,9 +134,9 @@ export const adminApi = {
 
     const updated = await request<EntityMap[R]>(`/admin/${resource}/${id}`, {
       method: "PATCH",
-      body: JSON.stringify(payload),
+      body: JSON.stringify(toBackendPayload(resource, payload)),
     });
-    return coerceEntity(updated as { files?: unknown }) as EntityMap[R];
+    return normalizeEntity(resource, unwrapEnvelope(updated));
   },
 
   async remove(resource: AdminResource, id: string) {
@@ -163,10 +154,11 @@ export const adminApi = {
       return mockApi.updateStudentRequestStatus(id, status);
     }
 
-    return request<StudentRequest>(`/admin/student-requests/${id}`, {
+    const payload = await request(`/admin/student-requests/${id}`, {
       method: "PATCH",
       body: JSON.stringify({ status }),
     });
+    return normalizeStudentRequest(unwrapEnvelope(payload));
   },
 
   async upload(files: File[]): Promise<UploadedFile[]> {
@@ -187,8 +179,14 @@ export const adminApi = {
       throw new Error("Upload failed");
     }
 
-    const payload = (await response.json()) as UploadedFile[] | { data?: UploadedFile[] };
-    return Array.isArray(payload) ? payload : payload.data ?? [];
+    const payload = await response.json();
+    const uploadedFiles = unwrapEnvelope(payload);
+    return Array.isArray(uploadedFiles)
+      ? uploadedFiles.map((file) => ({
+          ...file,
+          url: getFileUrl((file as UploadedFile).url),
+        }))
+      : [];
   },
 
   async listUploads(): Promise<UploadedFile[]> {
@@ -199,6 +197,14 @@ export const adminApi = {
     const payload = await request<UploadedFile[] | { items?: UploadedFile[]; data?: UploadedFile[] }>(
       "/admin/uploads",
     );
-    return normalizeListResponse(payload);
+    return normalizeListResponse(unwrapEnvelope<unknown[]>(payload) ?? []).map((file) => ({
+      ...(file as UploadedFile),
+      url: getFileUrl((file as UploadedFile).url),
+      name:
+        (file as UploadedFile & { originalName?: string; filename?: string }).name ||
+        (file as UploadedFile & { originalName?: string }).originalName ||
+        (file as UploadedFile & { filename?: string }).filename ||
+        "",
+    }));
   },
 };
